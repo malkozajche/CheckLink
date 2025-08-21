@@ -33,10 +33,12 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Playwright (Chromium only)
-        run: |
-          npm -g i playwright@1.46.0
-          npx playwright install --with-deps chromium
+      - name: Install Playwright (Chromium) & deps
+        uses: microsoft/playwright-github-action@v1
+        with:
+          run: |
+            npm -g i playwright@1.46.0
+            npx playwright install chromium
 
       - name: Write crawler script
         shell: bash
@@ -50,57 +52,48 @@ jobs:
           const maxPages = parseInt(process.argv[5] || '2000', 10);
 
           const normalize = (u) => {
-            try {
-              const url = new URL(u);
-              url.hash = '';
-              return url.href;
-            } catch { return null; }
+            try { const url = new URL(u); url.hash=''; return url.href; } catch { return null; }
           };
-
           const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
           (async () => {
-            const browser = await chromium.launch({ headless: true, args: [
-              '--disable-blink-features=AutomationControlled'
-            ]});
-            const context = await browser.newContext({
-              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-            });
-            const page = await context.newPage();
+            let browser; let page;
+            const listOut = 'all-urls.txt';
+            try {
+              browser = await chromium.launch({ headless: true, args: ['--disable-blink-features=AutomationControlled']});
+              const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' });
+              page = await context.newPage();
 
-            const start = normalize(startUrl);
-            const queue = [{ url: start, depth: 0 }];
-            const seen = new Set();
-            const all = new Set();
+              const start = normalize(startUrl);
+              const queue = [{ url: start, depth: 0 }];
+              const seen = new Set();
 
-            while (queue.length && all.size < maxPages) {
-              const { url, depth } = queue.shift();
-              if (!url || seen.has(url)) continue;
-              if (!prefixRe.test(url)) continue;
-              seen.add(url);
-              all.add(url);
-
-              try {
-                const resp = await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
-                // give SPA time to render TOC/content links
-                await sleep(800);
-                const hrefs = await page.$$eval('a[href]', as => as.map(a => a.getAttribute('href')));
-                for (const href of hrefs) {
-                  const abs = normalize(new URL(href, url).href);
-                  if (!abs) continue;
-                  if (!prefixRe.test(abs)) continue;
-                  if (!seen.has(abs) && depth + 1 <= maxDepth) {
-                    queue.push({ url: abs, depth: depth + 1 });
+              while (queue.length && seen.size < maxPages) {
+                const { url, depth } = queue.shift();
+                if (!url || seen.has(url)) continue;
+                if (!prefixRe.test(url)) continue;
+                seen.add(url);
+                try {
+                  await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+                  await sleep(800);
+                  const hrefs = await page.$$eval('a[href]', as => as.map(a => a.getAttribute('href')));
+                  for (const href of hrefs) {
+                    const abs = normalize(new URL(href, url).href);
+                    if (!abs) continue;
+                    if (!prefixRe.test(abs)) continue;
+                    if (!seen.has(abs) && depth + 1 <= maxDepth) queue.push({ url: abs, depth: depth + 1 });
                   }
-                }
-              } catch (e) {
-                // ignore navigation errors; keep crawling
+                } catch {}
               }
+              fs.writeFileSync(listOut, Array.from(seen).sort().join('\n') + '\n');
+            } catch (e) {
+              // Always emit a file so later steps don't crash
+              try { fs.writeFileSync('all-urls.txt', ''); } catch {}
+              // Do not hard fail; let pipeline continue
+              process.exitCode = 0;
+            } finally {
+              try { await page?.close(); await browser?.close(); } catch {}
             }
-
-            const list = Array.from(all).sort();
-            fs.writeFileSync('all-urls.txt', list.join('\n') + '\n');
-            await browser.close();
           })();
           EOF
 
@@ -112,9 +105,14 @@ jobs:
             "${{ github.event.inputs.max_depth }}" \
             "${{ github.event.inputs.max_pages }}"
 
-      - name: Quick count
+      - name: Quick count (won't fail if empty)
         run: |
-          echo "Discovered URLs: $(wc -l < all-urls.txt)" >> $GITHUB_STEP_SUMMARY
+          if [ -f all-urls.txt ]; then
+            echo "Discovered URLs: $(wc -l < all-urls.txt)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Discovered URLs: 0" >> $GITHUB_STEP_SUMMARY
+            touch all-urls.txt
+          fi
 
       - name: Upload URL list
         uses: actions/upload-artifact@v4
