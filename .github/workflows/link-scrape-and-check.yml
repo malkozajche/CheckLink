@@ -1,0 +1,143 @@
+# .github/workflows/link-scrape-and-check.yml
+name: Link scrape & check (SQLScript subtree)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: Start URL (root of subtree)
+        required: true
+        default: https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/
+      prefix_regex:
+        description: Regex to keep crawl inside subtree
+        required: true
+        default: ^https://help\.sap\.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/
+      max_depth:
+        description: Link depth (3–7)
+        required: true
+        default: "6"
+      max_pages:
+        description: Max pages to visit (safety)
+        required: true
+        default: "2000"
+
+jobs:
+  crawl_and_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright (Chromium only)
+        run: |
+          npm -g i playwright@1.46.0
+          npx playwright install --with-deps chromium
+
+      - name: Write crawler script
+        shell: bash
+        run: |
+          cat > crawler.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+          const startUrl = process.argv[2];
+          const prefixRe = new RegExp(process.argv[3]);
+          const maxDepth = parseInt(process.argv[4] || '6', 10);
+          const maxPages = parseInt(process.argv[5] || '2000', 10);
+
+          const normalize = (u) => {
+            try {
+              const url = new URL(u);
+              url.hash = '';
+              return url.href;
+            } catch { return null; }
+          };
+
+          const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true, args: [
+              '--disable-blink-features=AutomationControlled'
+            ]});
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+            });
+            const page = await context.newPage();
+
+            const start = normalize(startUrl);
+            const queue = [{ url: start, depth: 0 }];
+            const seen = new Set();
+            const all = new Set();
+
+            while (queue.length && all.size < maxPages) {
+              const { url, depth } = queue.shift();
+              if (!url || seen.has(url)) continue;
+              if (!prefixRe.test(url)) continue;
+              seen.add(url);
+              all.add(url);
+
+              try {
+                const resp = await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+                // give SPA time to render TOC/content links
+                await sleep(800);
+                const hrefs = await page.$$eval('a[href]', as => as.map(a => a.getAttribute('href')));
+                for (const href of hrefs) {
+                  const abs = normalize(new URL(href, url).href);
+                  if (!abs) continue;
+                  if (!prefixRe.test(abs)) continue;
+                  if (!seen.has(abs) && depth + 1 <= maxDepth) {
+                    queue.push({ url: abs, depth: depth + 1 });
+                  }
+                }
+              } catch (e) {
+                // ignore navigation errors; keep crawling
+              }
+            }
+
+            const list = Array.from(all).sort();
+            fs.writeFileSync('all-urls.txt', list.join('\n') + '\n');
+            await browser.close();
+          })();
+          EOF
+
+      - name: Run crawler
+        run: |
+          node crawler.mjs \
+            "${{ github.event.inputs.start_url }}" \
+            "${{ github.event.inputs.prefix_regex }}" \
+            "${{ github.event.inputs.max_depth }}" \
+            "${{ github.event.inputs.max_pages }}"
+
+      - name: Quick count
+        run: |
+          echo "Discovered URLs: $(wc -l < all-urls.txt)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload URL list
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-urls
+          path: all-urls.txt
+
+      - name: Link check each discovered page
+        run: |
+          echo "sourceUrl,status,state,finalUrl" > link-report.csv
+          while IFS= read -r URL || [ -n "$URL" ]; do
+            [ -z "$URL" ] && continue
+            npx -y linkinator "$URL" \
+              --timeout 15000 \
+              --concurrency 4 \
+              --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              --skip "^(mailto:|tel:)" \
+              --skip "#|javascript:void" \
+              --format csv | tail -n +2 >> link-report.csv || true
+          done < all-urls.txt
+
+      - name: Upload link report
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-report
+          path: link-report.csv
