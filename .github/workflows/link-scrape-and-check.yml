@@ -33,12 +33,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
         run: |
           npm install -g playwright@1.46.0
           npx playwright install chromium --with-deps
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: 0
 
       - name: Write crawler script
         shell: bash
@@ -197,22 +198,34 @@ jobs:
           TOTAL_URLS=$(wc -l < all-urls.txt)
           CURRENT=0
           
+          # Process URLs in batches to avoid memory issues
           while IFS= read -r URL || [ -n "$URL" ]; do
             [ -z "$URL" ] && continue
             
             CURRENT=$((CURRENT + 1))
             echo "Checking link $CURRENT/$TOTAL_URLS: $URL"
             
-            npx -y linkinator "$URL" \
-              --timeout 15000 \
-              --concurrency 4 \
-              --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-              --skip "^(mailto:|tel:)" \
-              --skip "#|javascript:void" \
-              --format csv | tail -n +2 >> link-report.csv || {
-                echo "Warning: Link check failed for $URL" >&2
-                continue
-              }
+            # Add retry logic for failed link checks
+            for attempt in {1..3}; do
+              if npx -y linkinator "$URL" \
+                --timeout 15000 \
+                --concurrency 2 \
+                --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+                --skip "^(mailto:|tel:)" \
+                --skip "#|javascript:void" \
+                --format csv | tail -n +2 >> link-report.csv; then
+                break
+              else
+                echo "Attempt $attempt failed for $URL, retrying..." >&2
+                sleep 2
+                if [ $attempt -eq 3 ]; then
+                  echo "All attempts failed for $URL" >&2
+                fi
+              fi
+            done
+            
+            # Small delay to be respectful to the server
+            sleep 1
           done < all-urls.txt
           
           echo "Link checking complete"
