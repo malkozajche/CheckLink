@@ -1,16 +1,16 @@
-name: Link check (help.sap.com)
+name: Link check (SQLScript subtree)
 
 on:
   workflow_dispatch:
     inputs:
       start_url:
-        description: Start URL to crawl
+        description: Start URL to crawl (root of the subtree)
         required: true
-        default: https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/sap-hana-cloud-sap-hana-sqlscript-reference
+        default: https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/
       max_depth:
-        description: Max crawl depth (2–4 is sensible)
+        description: Max crawl depth (3–5 is sensible)
         required: true
-        default: "3"
+        default: "4"
 
 jobs:
   crawl:
@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run link check
+      - name: Run link check (constrained to SQLScript subtree)
         run: |
           npx -y linkinator "${{ github.event.inputs.start_url }}" \
             --recurse \
@@ -32,6 +32,7 @@ jobs:
             --timeout 15000 \
             --concurrency 4 \
             --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            --url-filter "^https://help\\.sap\\.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/" \
             --skip "^(mailto:|tel:)" \
             --skip "#|javascript:void" \
             --format csv > link-report.csv || true
