@@ -34,24 +34,36 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install Playwright and dependencies
         run: |
-          npm install -g playwright@1.46.0
-          npx playwright install chromium --with-deps
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: 0
+          npm install playwright@1.46.0
+          npx playwright install chromium
+          npx playwright install-deps chromium
 
       - name: Write crawler script
         shell: bash
         run: |
-          cat > crawler.mjs <<'EOF'
+          cat > crawler.mjs << 'EOF'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
           
           const startUrl = process.argv[2];
-          const prefixRe = new RegExp(process.argv[3]);
+          const prefixPattern = process.argv[3];
           const maxDepth = parseInt(process.argv[4] || '6', 10);
           const maxPages = parseInt(process.argv[5] || '2000', 10);
+
+          if (!startUrl || !prefixPattern) {
+            console.error('Missing required arguments: startUrl and prefixPattern');
+            process.exit(1);
+          }
+
+          let prefixRe;
+          try {
+            prefixRe = new RegExp(prefixPattern);
+          } catch (error) {
+            console.error('Invalid regex pattern:', error.message);
+            process.exit(1);
+          }
 
           const normalize = (u) => {
             try { 
@@ -71,25 +83,30 @@ jobs:
             const listOut = 'all-urls.txt';
             
             console.log(`Starting crawl from: ${startUrl}`);
-            console.log(`Prefix regex: ${prefixRe}`);
+            console.log(`Prefix regex: ${prefixPattern}`);
             console.log(`Max depth: ${maxDepth}, Max pages: ${maxPages}`);
             
             try {
+              console.log('Launching browser...');
               browser = await chromium.launch({ 
                 headless: true, 
                 args: [
                   '--disable-blink-features=AutomationControlled',
                   '--disable-dev-shm-usage',
-                  '--no-sandbox'
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-web-security'
                 ]
               });
               
               const context = await browser.newContext({ 
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                viewport: { width: 1280, height: 720 }
+                viewport: { width: 1280, height: 720 },
+                ignoreHTTPSErrors: true
               });
               
               page = await context.newPage();
+              console.log('Browser launched successfully');
 
               const start = normalize(startUrl);
               if (!start) {
@@ -110,10 +127,10 @@ jobs:
                 
                 try {
                   await page.goto(url, { 
-                    waitUntil: 'networkidle', 
-                    timeout: 45000 
+                    waitUntil: 'domcontentloaded', 
+                    timeout: 30000 
                   });
-                  await sleep(800);
+                  await sleep(500);
                   
                   const hrefs = await page.$$eval('a[href]', links => 
                     links.map(link => link.getAttribute('href')).filter(Boolean)
@@ -127,7 +144,6 @@ jobs:
                         queue.push({ url: abs, depth: depth + 1 });
                       }
                     } catch (e) {
-                      // Skip invalid URLs
                       continue;
                     }
                   }
@@ -142,12 +158,10 @@ jobs:
               
             } catch (error) {
               console.error('Crawler error:', error);
-              // Always emit a file so later steps don't crash
               try { 
                 fs.writeFileSync('all-urls.txt', ''); 
               } catch {}
-              // Do not hard fail; let pipeline continue
-              process.exitCode = 0;
+              process.exit(0);
             } finally {
               try { 
                 if (page) await page.close();
@@ -186,6 +200,9 @@ jobs:
           path: all-urls.txt
           retention-days: 30
 
+      - name: Install linkinator
+        run: npm install -g linkinator
+
       - name: Link check each discovered page
         run: |
           echo "sourceUrl,status,state,finalUrl" > link-report.csv
@@ -198,31 +215,28 @@ jobs:
           TOTAL_URLS=$(wc -l < all-urls.txt)
           CURRENT=0
           
-          # Process URLs in batches to avoid memory issues
           while IFS= read -r URL || [ -n "$URL" ]; do
             [ -z "$URL" ] && continue
             
             CURRENT=$((CURRENT + 1))
             echo "Checking link $CURRENT/$TOTAL_URLS: $URL"
             
-            # Add retry logic for failed link checks
-            for attempt in {1..3}; do
-              if npx -y linkinator "$URL" \
-                --timeout 15000 \
-                --concurrency 2 \
-                --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-                --skip "^(mailto:|tel:)" \
-                --skip "#|javascript:void" \
-                --format csv | tail -n +2 >> link-report.csv; then
-                break
-              else
-                echo "Attempt $attempt failed for $URL, retrying..." >&2
-                sleep 2
-                if [ $attempt -eq 3 ]; then
-                  echo "All attempts failed for $URL" >&2
-                fi
-              fi
-            done
+            # Run linkinator with error handling
+            if linkinator "$URL" \
+              --timeout 15000 \
+              --concurrency 2 \
+              --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              --skip "^(mailto:|tel:)" \
+              --skip "#|javascript:void" \
+              --format csv > temp_report.csv 2>/dev/null; then
+              # Skip the header line and append to main report
+              tail -n +2 temp_report.csv >> link-report.csv || true
+            else
+              echo "Warning: Link check failed for $URL" >&2
+            fi
+            
+            # Clean up temp file
+            rm -f temp_report.csv
             
             # Small delay to be respectful to the server
             sleep 1
@@ -233,8 +247,10 @@ jobs:
       - name: Generate summary report
         run: |
           if [ -f link-report.csv ] && [ -s link-report.csv ]; then
-            TOTAL_LINKS=$(tail -n +2 link-report.csv | wc -l)
-            BROKEN_LINKS=$(tail -n +2 link-report.csv | grep -c ",BROKEN," || echo "0")
+            TOTAL_LINKS=$(wc -l < link-report.csv)
+            # Account for header line
+            TOTAL_LINKS=$((TOTAL_LINKS - 1))
+            BROKEN_LINKS=$(grep -c ",BROKEN," link-report.csv || echo "0")
             
             echo "## Link Check Summary" >> $GITHUB_STEP_SUMMARY
             echo "- Total links checked: $TOTAL_LINKS" >> $GITHUB_STEP_SUMMARY
@@ -242,7 +258,7 @@ jobs:
             
             if [ "$BROKEN_LINKS" -gt 0 ]; then
               echo "### Broken Links:" >> $GITHUB_STEP_SUMMARY
-              tail -n +2 link-report.csv | grep ",BROKEN," | head -10 >> $GITHUB_STEP_SUMMARY
+              grep ",BROKEN," link-report.csv | head -10 >> $GITHUB_STEP_SUMMARY || true
               if [ "$BROKEN_LINKS" -gt 10 ]; then
                 echo "... and $(($BROKEN_LINKS - 10)) more (see full report)" >> $GITHUB_STEP_SUMMARY
               fi
