@@ -1,4 +1,3 @@
-```yaml
 name: Link check (help.sap.com)
 
 on:
@@ -42,4 +41,3 @@ jobs:
         with:
           name: link-report
           path: link-report.csv
-```
