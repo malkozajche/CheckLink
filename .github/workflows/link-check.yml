@@ -1,0 +1,45 @@
+```yaml
+name: Link check (help.sap.com)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: Start URL to crawl
+        required: true
+        default: https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/sap-hana-cloud-sap-hana-sqlscript-reference
+      max_depth:
+        description: Max crawl depth (2–4 is sensible)
+        required: true
+        default: "3"
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run link check
+        run: |
+          npx -y linkinator "${{ github.event.inputs.start_url }}" \
+            --recurse \
+            --max-depth ${{ github.event.inputs.max_depth }} \
+            --timeout 15000 \
+            --concurrency 4 \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            --skip "^(mailto:|tel:)" \
+            --skip "#|javascript:void" \
+            --format csv > link-report.csv || true
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-report
+          path: link-report.csv
+```
