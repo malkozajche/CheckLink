@@ -24,6 +24,7 @@ on:
 jobs:
   crawl_and_check:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,13 +33,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Install Playwright (Chromium) & deps
-        uses: microsoft/playwright-github-action@v1
-        with:
-          run: |
-            npm -g i playwright@1.46.0
-            npx playwright install chromium
+      - name: Install dependencies
+        run: |
+          npm install -g playwright@1.46.0
+          npx playwright install chromium --with-deps
 
       - name: Write crawler script
         shell: bash
@@ -46,53 +46,112 @@ jobs:
           cat > crawler.mjs <<'EOF'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
+          
           const startUrl = process.argv[2];
           const prefixRe = new RegExp(process.argv[3]);
           const maxDepth = parseInt(process.argv[4] || '6', 10);
           const maxPages = parseInt(process.argv[5] || '2000', 10);
 
           const normalize = (u) => {
-            try { const url = new URL(u); url.hash=''; return url.href; } catch { return null; }
+            try { 
+              const url = new URL(u); 
+              url.hash = ''; 
+              return url.href; 
+            } catch { 
+              return null; 
+            }
           };
+          
           const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
           (async () => {
-            let browser; let page;
+            let browser;
+            let page;
             const listOut = 'all-urls.txt';
+            
+            console.log(`Starting crawl from: ${startUrl}`);
+            console.log(`Prefix regex: ${prefixRe}`);
+            console.log(`Max depth: ${maxDepth}, Max pages: ${maxPages}`);
+            
             try {
-              browser = await chromium.launch({ headless: true, args: ['--disable-blink-features=AutomationControlled']});
-              const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' });
+              browser = await chromium.launch({ 
+                headless: true, 
+                args: [
+                  '--disable-blink-features=AutomationControlled',
+                  '--disable-dev-shm-usage',
+                  '--no-sandbox'
+                ]
+              });
+              
+              const context = await browser.newContext({ 
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                viewport: { width: 1280, height: 720 }
+              });
+              
               page = await context.newPage();
 
               const start = normalize(startUrl);
+              if (!start) {
+                throw new Error('Invalid start URL');
+              }
+              
               const queue = [{ url: start, depth: 0 }];
               const seen = new Set();
 
               while (queue.length && seen.size < maxPages) {
                 const { url, depth } = queue.shift();
+                
                 if (!url || seen.has(url)) continue;
                 if (!prefixRe.test(url)) continue;
+                
                 seen.add(url);
+                console.log(`Crawling (${seen.size}/${maxPages}, depth ${depth}): ${url}`);
+                
                 try {
-                  await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+                  await page.goto(url, { 
+                    waitUntil: 'networkidle', 
+                    timeout: 45000 
+                  });
                   await sleep(800);
-                  const hrefs = await page.$$eval('a[href]', as => as.map(a => a.getAttribute('href')));
+                  
+                  const hrefs = await page.$$eval('a[href]', links => 
+                    links.map(link => link.getAttribute('href')).filter(Boolean)
+                  );
+                  
                   for (const href of hrefs) {
-                    const abs = normalize(new URL(href, url).href);
-                    if (!abs) continue;
-                    if (!prefixRe.test(abs)) continue;
-                    if (!seen.has(abs) && depth + 1 <= maxDepth) queue.push({ url: abs, depth: depth + 1 });
+                    try {
+                      const abs = normalize(new URL(href, url).href);
+                      if (!abs || seen.has(abs) || !prefixRe.test(abs)) continue;
+                      if (depth + 1 <= maxDepth) {
+                        queue.push({ url: abs, depth: depth + 1 });
+                      }
+                    } catch (e) {
+                      // Skip invalid URLs
+                      continue;
+                    }
                   }
-                } catch {}
+                } catch (error) {
+                  console.warn(`Failed to crawl ${url}: ${error.message}`);
+                }
               }
-              fs.writeFileSync(listOut, Array.from(seen).sort().join('\n') + '\n');
-            } catch (e) {
+              
+              const sortedUrls = Array.from(seen).sort();
+              fs.writeFileSync(listOut, sortedUrls.join('\n') + '\n');
+              console.log(`Crawl complete. Found ${sortedUrls.length} URLs.`);
+              
+            } catch (error) {
+              console.error('Crawler error:', error);
               // Always emit a file so later steps don't crash
-              try { fs.writeFileSync('all-urls.txt', ''); } catch {}
+              try { 
+                fs.writeFileSync('all-urls.txt', ''); 
+              } catch {}
               // Do not hard fail; let pipeline continue
               process.exitCode = 0;
             } finally {
-              try { await page?.close(); await browser?.close(); } catch {}
+              try { 
+                if (page) await page.close();
+                if (browser) await browser.close(); 
+              } catch {}
             }
           })();
           EOF
@@ -105,37 +164,83 @@ jobs:
             "${{ github.event.inputs.max_depth }}" \
             "${{ github.event.inputs.max_pages }}"
 
-      - name: Quick count (won't fail if empty)
+      - name: Validate crawl results
         run: |
           if [ -f all-urls.txt ]; then
-            echo "Discovered URLs: $(wc -l < all-urls.txt)" >> $GITHUB_STEP_SUMMARY
+            URL_COUNT=$(wc -l < all-urls.txt)
+            echo "Discovered URLs: $URL_COUNT" >> $GITHUB_STEP_SUMMARY
+            if [ "$URL_COUNT" -eq 0 ]; then
+              echo "Warning: No URLs were discovered during crawling" >> $GITHUB_STEP_SUMMARY
+            fi
           else
             echo "Discovered URLs: 0" >> $GITHUB_STEP_SUMMARY
+            echo "Error: Crawler did not produce output file" >> $GITHUB_STEP_SUMMARY
             touch all-urls.txt
           fi
 
       - name: Upload URL list
         uses: actions/upload-artifact@v4
         with:
-          name: all-urls
+          name: all-urls-${{ github.run_id }}
           path: all-urls.txt
+          retention-days: 30
 
       - name: Link check each discovered page
         run: |
           echo "sourceUrl,status,state,finalUrl" > link-report.csv
+          
+          if [ ! -s all-urls.txt ]; then
+            echo "No URLs to check - skipping link validation"
+            exit 0
+          fi
+          
+          TOTAL_URLS=$(wc -l < all-urls.txt)
+          CURRENT=0
+          
           while IFS= read -r URL || [ -n "$URL" ]; do
             [ -z "$URL" ] && continue
+            
+            CURRENT=$((CURRENT + 1))
+            echo "Checking link $CURRENT/$TOTAL_URLS: $URL"
+            
             npx -y linkinator "$URL" \
               --timeout 15000 \
               --concurrency 4 \
               --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
               --skip "^(mailto:|tel:)" \
               --skip "#|javascript:void" \
-              --format csv | tail -n +2 >> link-report.csv || true
+              --format csv | tail -n +2 >> link-report.csv || {
+                echo "Warning: Link check failed for $URL" >&2
+                continue
+              }
           done < all-urls.txt
+          
+          echo "Link checking complete"
+
+      - name: Generate summary report
+        run: |
+          if [ -f link-report.csv ] && [ -s link-report.csv ]; then
+            TOTAL_LINKS=$(tail -n +2 link-report.csv | wc -l)
+            BROKEN_LINKS=$(tail -n +2 link-report.csv | grep -c ",BROKEN," || echo "0")
+            
+            echo "## Link Check Summary" >> $GITHUB_STEP_SUMMARY
+            echo "- Total links checked: $TOTAL_LINKS" >> $GITHUB_STEP_SUMMARY
+            echo "- Broken links found: $BROKEN_LINKS" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$BROKEN_LINKS" -gt 0 ]; then
+              echo "### Broken Links:" >> $GITHUB_STEP_SUMMARY
+              tail -n +2 link-report.csv | grep ",BROKEN," | head -10 >> $GITHUB_STEP_SUMMARY
+              if [ "$BROKEN_LINKS" -gt 10 ]; then
+                echo "... and $(($BROKEN_LINKS - 10)) more (see full report)" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          else
+            echo "No link report generated" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload link report
         uses: actions/upload-artifact@v4
         with:
-          name: link-report
+          name: link-report-${{ github.run_id }}
           path: link-report.csv
+          retention-days: 30
