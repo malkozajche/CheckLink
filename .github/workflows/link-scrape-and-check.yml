@@ -1,45 +1,37 @@
-# Updated Crawler Script
+name: Link Scrape and Check
 
-const puppeteer = require('puppeteer');
+on:
+  push:
+    branches:
+      - main
 
-async function crawl(url) {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
 
-    // Improved wait strategy for loading content
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
-    await page.waitForTimeout(2000);
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    // Better link discovery techniques
-    const links = await page.evaluate(() => {
-        const elements = document.querySelectorAll('a');
-        return Array.from(elements).map(element => element.href);
-    });
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
 
-    console.log('Found links:', links);
+      - name: Install dependencies
+        run: |
+          npm install
 
-    // Normalizing URLs for SAP documentation
-    const normalizedLinks = links.map(link => normalizeUrl(link));
-    console.log('Normalized links:', normalizedLinks);
+      - name: Run Link Scraper
+        run: |
+          node link-scraper.js --wait 2000 --debug --selectors "a[href], link[href]" --normalize-url "https://sapsupport.example.com/docs"
+        env:
+          NODE_ENV: production
 
-    // Filtering out unwanted links with more comprehensive logic
-    const filteredLinks = normalizedLinks.filter(link => isValidLink(link));
-    console.log('Filtered links:', filteredLinks);
+      - name: Check links
+        run: |
+          npx linkinator './scraped-links/**/*.html' --quiet --retry 3 --timeout 5000
 
-    await browser.close();
-    return filteredLinks;
-}
-
-function normalizeUrl(url) {
-    // Implementation for robust URL normalization
-    // ...
-    return url;
-}
-
-function isValidLink(link) {
-    // Implementation for link validation logic
-    // ...
-    return true;
-}
-
-module.exports = crawl;
+      - name: Cleanup
+        run: |
+          rm -rf ./scraped-links
