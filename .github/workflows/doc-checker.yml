@@ -1,0 +1,52 @@
+# .github/workflows/test-simple.yml
+name: Simple Link Check Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: Start URL
+        required: true
+        default: https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test basic setup
+        run: |
+          echo "Testing basic functionality..."
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          
+      - name: Test simple crawl
+        run: |
+          echo "Testing URL access..."
+          curl -I "${{ github.event.inputs.start_url }}" || echo "URL test failed"
+          
+      - name: Install and test Playwright
+        run: |
+          npm install playwright
+          npx playwright install chromium
+          
+      - name: Simple browser test
+        run: |
+          cat > test.mjs << 'EOF'
+          import { chromium } from 'playwright';
+          
+          (async () => {
+            try {
+              console.log('Testing browser launch...');
+              const browser = await chromium.launch({ headless: true });
+              const page = await browser.newPage();
+              await page.goto('https://example.com');
+              console.log('Browser test successful');
+              await browser.close();
+            } catch (error) {
+              console.error('Browser test failed:', error);
+              process.exit(1);
+            }
+          })();
+          EOF
+          
+          node test.mjs
