@@ -1,0 +1,237 @@
+# .github/workflows/simple-multi-url-check.yml
+name: Simple Multi-URL Link Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs to crawl (one per line)'
+        required: true
+        default: |
+          https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-sqlscript-reference/
+          https://help.sap.com/docs/SAP_HANA_PLATFORM/
+          https://help.sap.com/docs/HANA_CLOUD_DATABASE/
+      base_regex:
+        description: 'Base regex pattern (will be adapted for each URL)'
+        required: true
+        default: '^https://help\.sap\.com/docs/[^/]+/'
+      max_depth:
+        description: Link depth (3–7)
+        required: true
+        default: "5"
+      max_pages_per_site:
+        description: Max pages to visit per site
+        required: true
+        default: "500"
+
+jobs:
+  crawl_and_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright and dependencies
+        run: |
+          npm install playwright@1.46.0
+          npx playwright install chromium
+          npx playwright install-deps chromium
+
+      - name: Process URLs and run crawler
+        run: |
+          # Convert multi-line input to array and crawl each
+          echo '${{ github.event.inputs.urls }}' | grep -v '^$' | while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            
+            echo "Processing URL: $url"
+            
+            # Generate a safe filename from URL
+            SITE_NAME=$(echo "$url" | sed 's|https\?://||' | sed 's|[^a-zA-Z0-9]|-|g' | sed 's|--*|-|g' | sed 's|^-\|-$||g')
+            
+            # Create site-specific regex by adapting the base regex
+            SITE_REGEX=$(echo '${{ github.event.inputs.base_regex }}' | sed "s|/\[^/\]\+/|$(echo "$url" | sed 's|https://[^/]*/docs/||' | sed 's|/.*||')/|")
+            
+            echo "Site: $SITE_NAME"
+            echo "Regex: $SITE_REGEX"
+            
+            # Run the original crawler for this URL
+            node -e "
+              import { chromium } from 'playwright';
+              import fs from 'node:fs';
+              
+              const startUrl = '$url';
+              const prefixPattern = '$SITE_REGEX';
+              const maxDepth = parseInt('${{ github.event.inputs.max_depth }}', 10);
+              const maxPages = parseInt('${{ github.event.inputs.max_pages_per_site }}', 10);
+              const siteName = '$SITE_NAME';
+
+              let prefixRe;
+              try {
+                prefixRe = new RegExp(prefixPattern);
+              } catch (error) {
+                console.error('Invalid regex pattern:', error.message);
+                process.exit(1);
+              }
+
+              const normalize = (u) => {
+                try { 
+                  const url = new URL(u); 
+                  url.hash = ''; 
+                  return url.href; 
+                } catch { 
+                  return null; 
+                }
+              };
+              
+              const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+              (async () => {
+                let browser;
+                let page;
+                
+                try {
+                  console.log(\`Starting crawl for \${siteName} from: \${startUrl}\`);
+                  
+                  browser = await chromium.launch({ 
+                    headless: true, 
+                    args: [
+                      '--disable-blink-features=AutomationControlled',
+                      '--disable-dev-shm-usage',
+                      '--no-sandbox',
+                      '--disable-setuid-sandbox',
+                      '--disable-web-security'
+                    ]
+                  });
+                  
+                  const context = await browser.newContext({ 
+                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    viewport: { width: 1280, height: 720 },
+                    ignoreHTTPSErrors: true
+                  });
+                  
+                  page = await context.newPage();
+
+                  const start = normalize(startUrl);
+                  if (!start) {
+                    throw new Error('Invalid start URL');
+                  }
+                  
+                  const queue = [{ url: start, depth: 0 }];
+                  const seen = new Set();
+                  const discovered = new Set();
+
+                  while (queue.length && seen.size < maxPages) {
+                    const { url, depth } = queue.shift();
+                    
+                    if (!url || seen.has(url)) continue;
+                    if (!prefixRe.test(url)) continue;
+                    
+                    seen.add(url);
+                    discovered.add(url);
+                    console.log(\`[\${siteName}] Crawling (\${seen.size}/\${maxPages}, depth \${depth}): \${url}\`);
+                    
+                    try {
+                      await page.goto(url, { 
+                        waitUntil: 'networkidle', 
+                        timeout: 30000 
+                      });
+                      await sleep(1000);
+                      
+                      const hrefs = await page.\$\$eval('a[href]', links => 
+                        links
+                          .map(link => {
+                            const href = link.getAttribute('href');
+                            return href ? href.trim() : null;
+                          })
+                          .filter(href => href && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('tel:'))
+                      );
+                      
+                      for (const href of hrefs) {
+                        try {
+                          let absoluteUrl;
+                          if (href.startsWith('http://') || href.startsWith('https://')) {
+                            absoluteUrl = href;
+                          } else {
+                            absoluteUrl = new URL(href, url).href;
+                          }
+                          
+                          const normalized = normalize(absoluteUrl);
+                          if (!normalized) continue;
+                          
+                          if (prefixRe.test(normalized)) {
+                            discovered.add(normalized);
+                          }
+                          
+                          if (!seen.has(normalized) && depth + 1 <= maxDepth && prefixRe.test(normalized)) {
+                            queue.push({ url: normalized, depth: depth + 1 });
+                          }
+                        } catch (e) {
+                          continue;
+                        }
+                      }
+                      
+                    } catch (error) {
+                      console.warn(\`[\${siteName}] Failed to crawl \${url}: \${error.message}\`);
+                    }
+                  }
+                  
+                  const sortedUrls = Array.from(discovered).sort();
+                  fs.writeFileSync(\`urls-\${siteName}.txt\`, sortedUrls.join('\n') + '\n');
+                  console.log(\`[\${siteName}] Crawl complete. Visited \${seen.size} pages, discovered \${sortedUrls.length} URLs.\`);
+                  
+                } catch (error) {
+                  console.error(\`Crawler error for \${siteName}:\`, error);
+                  try { 
+                    fs.writeFileSync(\`urls-\${siteName}.txt\`, ''); 
+                  } catch {}
+                } finally {
+                  try { 
+                    if (page) await page.close();
+                    if (browser) await browser.close(); 
+                  } catch {}
+                }
+              })();
+            " || echo "Failed to crawl $url"
+          done
+          
+          # Combine all results
+          cat urls-*.txt | sort -u > all-urls.txt || touch all-urls.txt
+          
+          echo "=== CRAWL SUMMARY ===" > crawl-summary.txt
+          for file in urls-*.txt; do
+            if [ -f "$file" ]; then
+              SITE=$(basename "$file" .txt | sed 's/^urls-//')
+              COUNT=$(wc -l < "$file")
+              echo "$SITE: $COUNT URLs" >> crawl-summary.txt
+            fi
+          done
+          
+          TOTAL=$(wc -l < all-urls.txt)
+          echo "Total unique URLs: $TOTAL" >> crawl-summary.txt
+
+      - name: Show results
+        run: |
+          echo "## Crawl Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f crawl-summary.txt ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat crawl-summary.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload URL files
+        uses: actions/upload-artifact@v4
+        with:
+          name: crawl-results-${{ github.run_id }}
+          path: |
+            all-urls.txt
+            urls-*.txt
+            crawl-summary.txt
+          retention-days: 30
+
+      # Add link checking steps here if needed...
