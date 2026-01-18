@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On The Move - Immigration in the Industrial Revolution</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IM Fell English', Georgia, serif;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(139,115,85,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(139,115,85,0.1) 0%, transparent 50%),
+                linear-gradient(135deg, #2c1810 0%, #3d2817 25%, #4a3525 50%, #3d2817 75%, #2c1810 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(212,175,55,0.03) 0%, transparent 2%),
+                radial-gradient(circle at 80% 40%, rgba(212,175,55,0.02) 0%, transparent 1.5%),
+                radial-gradient(circle at 40% 80%, rgba(212,175,55,0.025) 0%, transparent 2%),
+                radial-gradient(circle at 90% 90%, rgba(212,175,55,0.02) 0%, transparent 1%);
+            pointer-events: none;
+            animation: shimmer 15s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Main poster container - LANDSCAPE */
+        .poster {
+            width: 100%;
+            max-width: 1400px;
+            aspect-ratio: 1.414 / 1;
+            margin: 0 auto;
+            padding: 30px 35px;
+            background: 
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
+                radial-gradient(ellipse at 15% 15%, rgba(255,248,230,0.3) 0%, transparent 40%),
+                radial-gradient(ellipse at 85% 85%, rgba(200,180,140,0.25) 0%, transparent 40%),
+                radial-gradient(ellipse at 50% 50%, rgba(245,237,216,0.15) 0%, transparent 60%),
+                linear-gradient(135deg, #f5edd8 0%, #e8dcc8 15%, #d4c4a8 35%, #c9b896 50%, #d4c4a8 65%, #e8dcc8 85%, #f5edd8 100%);
+            position: relative;
+            box-shadow: 
+                0 0 0 2px #d4af37,
+                0 0 0 6px #8b7355,
+                0 0 0 8px #654321,
+                0 0 0 12px #3d2817,
+                0 8px 32px rgba(0,0,0,0.5),
+                0 16px 48px rgba(0,0,0,0.3),
+                inset 0 0 100px rgba(139,115,85,0.15),
+                inset 0 0 200px rgba(101,67,33,0.08);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            animation: posterFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes posterFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* Vignette overlay */
+        .poster::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(74,55,40,0.15) 100%);
+            pointer-events: none;
+            z-index: 100;
+            border-radius: 4px;
+        }
+
+        /* Compass - repositioned for landscape */
+        .compass {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            width: 90px;
+            height: 90px;
+            opacity: 0.95;
+            z-index: 10;
+            animation: compassPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes compassPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)); }
+            50% { transform: scale(1.02); filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.4)); }
+        }
+
+        .compass svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Title section - compact for landscape */
+        .title-section {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 5;
+            flex-shrink: 0;
+        }
+
+        .title-banner {
+            display: inline-block;
+            background: linear-gradient(180deg, #a0522d 0%, #8b4513 30%, #654321 100%);
+            padding: 14px 55px;
+            border-radius: 4px;
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.5),
+                0 8px 25px rgba(0,0,0,0.3),
+                inset 0 2px 0 rgba(255,255,255,0.15),
+                inset 0 -2px 0 rgba(0,0,0,0.2);
+            border: 3px solid #3d2817;
+            position: relative;
+            animation: bannerGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes bannerGlow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 8px 25px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 4px 20px rgba(212,175,55,0.3), 0 8px 30px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.2); }
+        }
+
+        .title-banner::before,
+        .title-banner::after {
+            content: '⚓';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #d4af37;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            animation: anchorSway 3s ease-in-out infinite;
+        }
+
+        .title-banner::before { left: 14px; animation-delay: -1.5s; }
+        .title-banner::after { right: 14px; }
+
+        @keyframes anchorSway {
+            0%, 100% { transform: translateY(-50%) rotate(-3deg); }
+            50% { transform: translateY(-50%) rotate(3deg); }
+        }
+
+        .main-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.4rem;
+            color: #f4e4c4;
+            text-shadow: 
+                2px 2px 4px rgba(0,0,0,0.6),
+                0 0 20px rgba(212,175,55,0.2);
+            letter-spacing: 8px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-family: 'IM Fell English', serif;
+            font-size: 1.1rem;
+            color: #d4c4a8;
+            font-style: italic;
+            margin-top: 6px;
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Main content - 3 column layout for landscape */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr 1fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Left column */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Center column - big image and map */
+        .center-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Right column */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Paper cutout cards */
+        .paper-card {
+            background: 
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)' opacity='0.03'/%3E%3C/svg%3E"),
+                linear-gradient(145deg, #fff8e7 0%, #f8f0dc 30%, #f5edd8 50%, #f0e8d0 70%, #ebe3ce 100%);
+            padding: 15px;
+            position: relative;
+            box-shadow: 
+                4px 4px 15px rgba(0,0,0,0.25),
+                -1px -1px 0 rgba(255,255,255,0.7),
+                inset 0 0 30px rgba(139,115,85,0.05);
+            transform: rotate(var(--rotate, 0deg));
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .paper-card:hover {
+            transform: rotate(var(--rotate, 0deg)) scale(1.01);
+            box-shadow: 
+                6px 6px 20px rgba(0,0,0,0.3),
+                -1px -1px 0 rgba(255,255,255,0.8),
+                inset 0 0 30px rgba(139,115,85,0.08);
+        }
+
+        .paper-card.no-flex {
+            flex: none;
+        }
+
+        /* Tape effect */
+        .tape {
+            position: absolute;
+            width: 65px;
+            height: 22px;
+            background: linear-gradient(180deg, rgba(255,240,190,0.9) 0%, rgba(245,225,170,0.8) 100%);
+            box-shadow: 
+                0 2px 4px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+            z-index: 10;
+            border-radius: 1px;
+        }
+
+        .tape::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(200,180,140,0.1) 2px,
+                rgba(200,180,140,0.1) 4px
+            );
+        }
+
+        .tape-top { top: -11px; left: 50%; transform: translateX(-50%) rotate(-2deg); }
+        .tape-corner { top: -9px; right: 14px; transform: rotate(45deg); width: 55px; }
+        .tape-left { top: 18px; left: -12px; transform: rotate(-45deg); width: 55px; }
+
+        /* Card titles */
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            color: #4a3728;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #8b7355;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.3;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .card-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 50px;
+            height: 2px;
+            background: linear-gradient(90deg, #d4af37, transparent);
+        }
+
+        .card-title .icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.2));
+        }
+
+        /* Image frames */
+        .image-frame {
+            background: linear-gradient(135deg, #4a3525 0%, #3d2817 50%, #2a1a0f 100%);
+            padding: 8px;
+            box-shadow: 
+                inset 0 0 10px rgba(0,0,0,0.6),
+                3px 3px 10px rgba(0,0,0,0.35),
+                0 0 0 1px rgba(212,175,55,0.3);
+            flex: 1;
+            display: flex;
+            min-height: 0;
+            position: relative;
+        }
+
+        .image-frame::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            border: 1px solid rgba(212,175,55,0.2);
+            pointer-events: none;
+        }
+
+        .image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: sepia(25%) contrast(1.08) brightness(0.95);
+            transition: filter 0.3s ease;
+        }
+
+        .image-frame:hover img {
+            filter: sepia(15%) contrast(1.1) brightness(1);
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+            min-height: 120px;
+            background: 
+                linear-gradient(135deg, rgba(139,115,85,0.1) 25%, transparent 25%),
+                linear-gradient(-135deg, rgba(139,115,85,0.1) 25%, transparent 25%),
+                linear-gradient(45deg, rgba(139,115,85,0.1) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(139,115,85,0.1) 25%, transparent 25%),
+                linear-gradient(135deg, #d4c4a8 0%, #c9b896 100%);
+            background-size: 20px 20px, 20px 20px, 20px 20px, 20px 20px, 100% 100%;
+            background-position: 0 0, 10px 0, 10px -10px, 0 10px, 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #8b7355;
+            color: #654321;
+            font-style: italic;
+            text-align: center;
+            padding: 15px;
+        }
+
+        .image-placeholder .placeholder-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            font-style: normal;
+            color: #4a3728;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+        }
+
+        .image-placeholder .placeholder-source {
+            font-size: 0.8rem;
+            color: #8b7355;
+        }
+
+        .image-caption {
+            font-size: 0.78rem;
+            font-style: italic;
+            color: #6b5344;
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.4;
+            flex-shrink: 0;
+        }
+
+        /* Quote box */
+        .quote-box {
+            background: linear-gradient(135deg, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.04) 100%);
+            border-left: 4px solid #8b4513;
+            padding: 12px 15px;
+            margin: 10px 0;
+            position: relative;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .quote-mark {
+            font-size: 2.5rem;
+            color: rgba(139,69,19,0.2);
+            font-family: 'Playfair Display', serif;
+            line-height: 1;
+            position: absolute;
+            top: 0;
+            left: 8px;
+        }
+
+        .quote-text {
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: #4a3728;
+            font-style: italic;
+            padding-left: 22px;
+            margin: 0;
+        }
+
+        .quote-source {
+            font-size: 0.78rem;
+            color: #8b7355;
+            margin-top: 8px;
+            padding-left: 22px;
+            font-style: normal;
+            font-weight: 500;
+        }
+
+        /* Bullet lists */
+        .factor-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .factor-list li {
+            padding: 7px 0 7px 24px;
+            position: relative;
+            border-bottom: 1px dashed #c9b896;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            transition: background 0.2s ease;
+        }
+
+        .factor-list li:hover {
+            background: rgba(139,115,85,0.05);
+        }
+
+        .factor-list li:last-child {
+            border-bottom: none;
+        }
+
+        .factor-list li::before {
+            content: '✦';
+            position: absolute;
+            left: 4px;
+            top: 7px;
+            color: #8b4513;
+            font-size: 0.75rem;
+            transition: transform 0.2s ease;
+        }
+
+        .factor-list li:hover::before {
+            transform: scale(1.2);
+        }
+
+        /* Stats table - compact */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            margin-top: 8px;
+        }
+
+        .stats-table th {
+            background: linear-gradient(180deg, #6b4423 0%, #4a3218 100%);
+            color: #f4e4c4;
+            padding: 8px 10px;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 0.72rem;
+            letter-spacing: 0.8px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        }
+
+        .stats-table td {
+            background: rgba(255,248,230,0.95);
+            padding: 8px 10px;
+            text-align: center;
+            border: 1px solid #c9b896;
+            transition: background 0.2s ease;
+        }
+
+        .stats-table tr:hover td {
+            background: rgba(255,240,210,1);
+        }
+
+        .highlight-number {
+            font-weight: bold;
+            color: #8b0000;
+            text-shadow: 0 0 1px rgba(139,0,0,0.3);
+        }
+
+        /* Push/Pull compact */
+        .push-pull-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .push-box, .pull-box {
+            padding: 12px;
+            border-radius: 6px;
+            transition: transform 0.2s ease;
+        }
+
+        .push-box:hover, .pull-box:hover {
+            transform: translateY(-2px);
+        }
+
+        .push-box {
+            background: linear-gradient(135deg, rgba(139,0,0,0.1) 0%, rgba(139,0,0,0.04) 100%);
+            border-left: 4px solid #8b0000;
+        }
+
+        .pull-box {
+            background: linear-gradient(135deg, rgba(0,100,0,0.1) 0%, rgba(0,100,0,0.04) 100%);
+            border-left: 4px solid #006400;
+        }
+
+        .push-box h4, .pull-box h4 {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .push-box h4 { color: #8b0000; }
+        .pull-box h4 { color: #006400; }
+
+        .push-box .factor-list li, .pull-box .factor-list li {
+            font-size: 0.82rem;
+            padding: 5px 0 5px 20px;
+        }
+
+        .push-box .factor-list li::before, .pull-box .factor-list li::before {
+            top: 5px;
+            font-size: 0.6rem;
+        }
+
+        /* Map - compact for landscape */
+        .map-card {
+            flex: none;
+        }
+
+        .world-map {
+            width: 100%;
+            height: 145px;
+            background: linear-gradient(180deg, #d9e8f5 0%, #c5d8eb 50%, #b8cde0 100%);
+            border: 2px solid #654321;
+            border-radius: 2px;
+        }
+
+        /* Question banner - horizontal at bottom */
+        .question-banner {
+            background: linear-gradient(145deg, #9b1010 0%, #7a0000 50%, #5c0000 100%);
+            color: #f4e4c4;
+            padding: 14px 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 
+                0 0 0 3px #d4af37,
+                0 0 0 5px rgba(139,69,19,0.5),
+                4px 4px 20px rgba(0,0,0,0.4),
+                inset 0 2px 0 rgba(255,255,255,0.1),
+                inset 0 -2px 0 rgba(0,0,0,0.2);
+            margin-top: 15px;
+            flex-shrink: 0;
+            overflow: hidden;
+            border-radius: 3px;
+        }
+
+        .question-banner::before,
+        .question-banner::after {
+            content: '?';
+            position: absolute;
+            font-size: 5rem;
+            font-family: 'Playfair Display', serif;
+            color: rgba(255,255,255,0.04);
+            pointer-events: none;
+            animation: floatQuestion 4s ease-in-out infinite;
+        }
+
+        .question-banner::before { top: -20px; left: 30px; animation-delay: -2s; }
+        .question-banner::after { top: -20px; right: 30px; }
+
+        @keyframes floatQuestion {
+            0%, 100% { transform: translateY(0); opacity: 0.04; }
+            50% { transform: translateY(-5px); opacity: 0.08; }
+        }
+
+        .question-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.95rem;
+            letter-spacing: 3px;
+            color: #d4af37;
+            display: inline;
+            margin-right: 18px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .question-text {
+            font-size: 0.98rem;
+            line-height: 1.65;
+            display: inline;
+        }
+
+        .question-text .highlight {
+            color: #d4af37;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(212,175,55,0.3);
+        }
+
+        /* Footer - inline */
+        .poster-footer {
+            text-align: center;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 2px solid #8b7355;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            position: relative;
+        }
+
+        .poster-footer::before {
+            content: '❧';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #e8dcc8, #d4c4a8);
+            padding: 0 15px;
+            color: #8b7355;
+            font-size: 1.2rem;
+        }
+
+        .footer-text {
+            font-family: 'IM Fell English', serif;
+            font-size: 0.88rem;
+            color: #654321;
+            font-style: italic;
+        }
+
+        .footer-name {
+            font-family: 'Cinzel', serif;
+            font-size: 0.88rem;
+            color: #8b7355;
+            letter-spacing: 3px;
+        }
+
+        /* Corner decorations */
+        .corner-decoration {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+            z-index: 2;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .poster:hover .corner-decoration {
+            opacity: 0.8;
+        }
+
+        .corner-tl { top: 12px; left: 12px; }
+        .corner-tr { top: 12px; right: 12px; transform: rotate(90deg); }
+        .corner-bl { bottom: 12px; left: 12px; transform: rotate(-90deg); }
+        .corner-br { bottom: 12px; right: 12px; transform: rotate(180deg); }
+
+        /* Intro text */
+        .intro-text {
+            font-size: 0.88rem;
+            font-style: italic;
+            color: #6b5344;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            padding-bottom: 8px;
+            border-bottom: 1px dotted #c9b896;
+        }
+
+        .intro-text strong {
+            color: #4a3728;
+            font-size: 1rem;
+        }
+
+        /* Section header in cards */
+        .section-header {
+            font-family: 'Cinzel', serif;
+            color: #4a3728;
+            margin: 12px 0 8px 0;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-header::before {
+            content: '';
+            display: inline-block;
+            width: 15px;
+            height: 2px;
+            background: linear-gradient(90deg, #d4af37, #8b7355);
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .poster {
+                box-shadow: none;
+                border: 2px solid #654321;
+                width: 100%;
+                height: 100vh;
+                max-width: none;
+                aspect-ratio: auto;
+                animation: none;
+            }
+            .paper-card:hover {
+                transform: rotate(var(--rotate, 0deg));
+            }
+        }
+
+        /* Responsive for screen */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+            .center-column {
+                grid-row: 1 / 3;
+            }
+        }
+
+        @media (max-width: 800px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .poster {
+                aspect-ratio: auto;
+            }
+            .main-title {
+                font-size: 1.8rem;
+                letter-spacing: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="poster">
+        <!-- Corner decorations -->
+        <div class="corner-decoration corner-tl">
+            <svg viewBox="0 0 100 100" fill="#8b7355">
+                <path d="M0,0 L40,0 L40,5 L5,5 L5,40 L0,40 Z"/>
+                <circle cx="20" cy="20" r="12" fill="none" stroke="#8b7355" stroke-width="2"/>
+                <circle cx="20" cy="20" r="6" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.5"/>
+            </svg>
+        </div>
+        <div class="corner-decoration corner-tr">
+            <svg viewBox="0 0 100 100" fill="#8b7355">
+                <path d="M0,0 L40,0 L40,5 L5,5 L5,40 L0,40 Z"/>
+                <circle cx="20" cy="20" r="12" fill="none" stroke="#8b7355" stroke-width="2"/>
+                <circle cx="20" cy="20" r="6" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.5"/>
+            </svg>
+        </div>
+        <div class="corner-decoration corner-bl">
+            <svg viewBox="0 0 100 100" fill="#8b7355">
+                <path d="M0,0 L40,0 L40,5 L5,5 L5,40 L0,40 Z"/>
+                <circle cx="20" cy="20" r="12" fill="none" stroke="#8b7355" stroke-width="2"/>
+                <circle cx="20" cy="20" r="6" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.5"/>
+            </svg>
+        </div>
+        <div class="corner-decoration corner-br">
+            <svg viewBox="0 0 100 100" fill="#8b7355">
+                <path d="M0,0 L40,0 L40,5 L5,5 L5,40 L0,40 Z"/>
+                <circle cx="20" cy="20" r="12" fill="none" stroke="#8b7355" stroke-width="2"/>
+                <circle cx="20" cy="20" r="6" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.5"/>
+            </svg>
+        </div>
+
+        <!-- Compass -->
+        <div class="compass">
+            <svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#e8c252"/>
+                        <stop offset="30%" style="stop-color:#f4e4b5"/>
+                        <stop offset="50%" style="stop-color:#d4af37"/>
+                        <stop offset="70%" style="stop-color:#f4e4b5"/>
+                        <stop offset="100%" style="stop-color:#b8860b"/>
+                    </linearGradient>
+                    <filter id="compassShadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+                    </filter>
+                </defs>
+                <circle cx="50" cy="50" r="47" fill="none" stroke="url(#goldGrad)" stroke-width="4" filter="url(#compassShadow)"/>
+                <circle cx="50" cy="50" r="43" fill="none" stroke="#8b7355" stroke-width="1"/>
+                <circle cx="50" cy="50" r="39" fill="#f5edd8" stroke="#8b7355" stroke-width="1"/>
+                
+                <!-- Compass tick marks -->
+                <g stroke="#8b7355" stroke-width="1">
+                    <line x1="50" y1="14" x2="50" y2="18"/>
+                    <line x1="50" y1="82" x2="50" y2="86"/>
+                    <line x1="14" y1="50" x2="18" y2="50"/>
+                    <line x1="82" y1="50" x2="86" y2="50"/>
+                </g>
+                
+                <polygon points="50,14 54,44 50,38 46,44" fill="#4a3728">
+                    <animateTransform attributeName="transform" type="rotate" values="0 50 50; 2 50 50; 0 50 50; -2 50 50; 0 50 50" dur="8s" repeatCount="indefinite"/>
+                </polygon>
+                <polygon points="50,86 54,56 50,62 46,56" fill="#8b7355">
+                    <animateTransform attributeName="transform" type="rotate" values="0 50 50; 2 50 50; 0 50 50; -2 50 50; 0 50 50" dur="8s" repeatCount="indefinite"/>
+                </polygon>
+                <polygon points="14,50 44,46 38,50 44,54" fill="#8b7355">
+                    <animateTransform attributeName="transform" type="rotate" values="0 50 50; 2 50 50; 0 50 50; -2 50 50; 0 50 50" dur="8s" repeatCount="indefinite"/>
+                </polygon>
+                <polygon points="86,50 56,46 62,50 56,54" fill="#8b7355">
+                    <animateTransform attributeName="transform" type="rotate" values="0 50 50; 2 50 50; 0 50 50; -2 50 50; 0 50 50" dur="8s" repeatCount="indefinite"/>
+                </polygon>
+                <circle cx="50" cy="50" r="6" fill="url(#goldGrad)" stroke="#654321" stroke-width="1"/>
+                <circle cx="50" cy="50" r="3" fill="#654321"/>
+                <text x="50" y="28" text-anchor="middle" fill="#4a3728" font-family="Cinzel, serif" font-size="10" font-weight="bold">N</text>
+                <text x="50" y="80" text-anchor="middle" fill="#8b7355" font-family="Cinzel, serif" font-size="8">S</text>
+                <text x="23" y="53" text-anchor="middle" fill="#8b7355" font-family="Cinzel, serif" font-size="8">W</text>
+                <text x="77" y="53" text-anchor="middle" fill="#8b7355" font-family="Cinzel, serif" font-size="8">E</text>
+            </svg>
+        </div>
+
+        <!-- Title Section -->
+        <section class="title-section">
+            <div class="title-banner">
+                <h1 class="main-title">ON THE MOVE</h1>
+                <p class="subtitle">Immigration During the Industrial Revolution</p>
+            </div>
+        </section>
+
+        <!-- Main 3-column content -->
+        <div class="main-content">
+            
+            <!-- LEFT COLUMN -->
+            <div class="left-column">
+                
+                <!-- Irish Famine -->
+                <div class="paper-card" style="--rotate: -0.8deg;">
+                    <div class="tape tape-top"></div>
+                    <h3 class="card-title"><span class="icon">☘️</span> The Irish Famine</h3>
+                    <div class="image-frame">
+                        <div class="image-placeholder">
+                            <div class="placeholder-title">Skibbereen 1847</div>
+                            <div class="placeholder-source">James Mahony</div>
+                        </div>
+                    </div>
+                    <div class="quote-box">
+                        <span class="quote-mark">"</span>
+                        <p class="quote-text">Corpses lay on the ground, half eaten by dogs. Children had swollen stomachs.</p>
+                        <p class="quote-source">— Commander Caffyn, 1847</p>
+                    </div>
+                    <ul class="factor-list">
+                        <li><strong>1 million</strong> died of starvation</li>
+                        <li><strong>1.5 million</strong> fled to America & Britain</li>
+                    </ul>
+                </div>
+
+                <!-- Statistics -->
+                <div class="paper-card no-flex" style="--rotate: 0.5deg;">
+                    <div class="tape tape-corner"></div>
+                    <h3 class="card-title"><span class="icon">📊</span> Emigration Numbers</h3>
+                    <p class="intro-text"><strong>12 million</strong> left Britain in the 19th century</p>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>USA</th>
+                                <th>Canada</th>
+                                <th>Australia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1871-80</td>
+                                <td>44,200</td>
+                                <td>90,000</td>
+                                <td>184,000</td>
+                            </tr>
+                            <tr>
+                                <td>1881-90</td>
+                                <td class="highlight-number">1,088,000</td>
+                                <td>257,000</td>
+                                <td>317,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- CENTER COLUMN -->
+            <div class="center-column">
+                
+                <!-- Main Emigrant Ship Image -->
+                <div class="paper-card" style="--rotate: 0deg;">
+                    <div class="tape tape-top"></div>
+                    <h3 class="card-title"><span class="icon">⛵</span> Leaving Britain — The "Coffin Ships"</h3>
+                    <div class="image-frame">
+                        <div class="image-placeholder">
+                            <div class="placeholder-title">"The Emigrant Ship"</div>
+                            <div class="placeholder-source">Charles Staniland, c.1878</div>
+                        </div>
+                    </div>
+                    <p class="image-caption">"The Emigrant Ship" — Charles Staniland, c.1878</p>
+                    <div class="quote-box">
+                        <span class="quote-mark">"</span>
+                        <p class="quote-text">One could not help thinking of the hundreds of sorrowful hearts on board... and the farewells and partings forever.</p>
+                        <p class="quote-source">— Kilvert's Diary, 1872</p>
+                    </div>
+                </div>
+
+                <!-- Map -->
+                <div class="paper-card map-card" style="--rotate: 0deg;">
+                    <h3 class="card-title"><span class="icon">🗺️</span> Where Did They Go?</h3>
+                    <svg class="world-map" viewBox="0 0 900 180" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#c9dae8"/>
+                                <stop offset="100%" style="stop-color:#a8c4d8"/>
+                            </linearGradient>
+                            <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#d8c8a8"/>
+                                <stop offset="100%" style="stop-color:#c4b494"/>
+                            </linearGradient>
+                        </defs>
+                        <rect width="900" height="180" fill="url(#oceanGrad)"/>
+                        
+                        <!-- Europe -->
+                        <ellipse cx="480" cy="60" rx="50" ry="40" fill="url(#landGrad)" stroke="#8b7355" stroke-width="1.5"/>
+                        <text x="480" y="65" font-family="IM Fell English" font-size="10" fill="#4a3728" text-anchor="middle">Europe</text>
+                        
+                        <!-- Britain highlighted -->
+                        <ellipse cx="455" cy="50" rx="12" ry="16" fill="#8b4513" opacity="0.8"/>
+                        <text x="455" y="53" font-family="Cinzel" font-size="7" fill="#f4e4c4" text-anchor="middle" font-weight="bold">GB</text>
+                        
+                        <!-- Ireland -->
+                        <ellipse cx="438" cy="52" rx="7" ry="10" fill="#228b22" opacity="0.7"/>
+                        
+                        <!-- North America / USA -->
+                        <path d="M80,25 Q130,15 180,25 Q220,30 240,55 Q250,85 235,115 Q200,140 150,140 Q100,135 70,110 Q50,85 55,60 Q60,35 80,25 Z" 
+                              fill="url(#landGrad)" stroke="#8b7355" stroke-width="1.5"/>
+                        <text x="150" y="80" font-family="IM Fell English" font-size="14" fill="#4a3728" font-weight="bold" text-anchor="middle">USA</text>
+                        
+                        <!-- Canada -->
+                        <path d="M90,10 Q150,5 210,15 Q240,20 245,30 Q210,22 160,18 Q110,15 90,22 Q80,18 90,10 Z" 
+                              fill="#c9b896" stroke="#8b7355" stroke-width="1"/>
+                        <text x="165" y="18" font-family="IM Fell English" font-size="9" fill="#4a3728" text-anchor="middle">Canada</text>
+                        
+                        <!-- Australia -->
+                        <ellipse cx="780" cy="130" rx="55" ry="35" fill="url(#landGrad)" stroke="#8b7355" stroke-width="1.5"/>
+                        <text x="780" y="135" font-family="IM Fell English" font-size="12" fill="#4a3728" font-weight="bold" text-anchor="middle">Australia</text>
+                        
+                        <!-- Migration routes -->
+                        <path d="M445,55 Q320,40 180,65" fill="none" stroke="#8b0000" stroke-width="3" stroke-dasharray="8,4" stroke-linecap="round">
+                            <animate attributeName="stroke-dashoffset" from="24" to="0" dur="2s" repeatCount="indefinite"/>
+                        </path>
+                        <polygon points="185,62 172,72 188,68" fill="#8b0000"/>
+                        
+                        <path d="M443,48 Q320,20 185,18" fill="none" stroke="#654321" stroke-width="2" stroke-dasharray="5,3" stroke-linecap="round">
+                            <animate attributeName="stroke-dashoffset" from="16" to="0" dur="2.5s" repeatCount="indefinite"/>
+                        </path>
+                        <polygon points="190,15 177,22 190,22" fill="#654321"/>
+                        
+                        <path d="M495,75 Q600,110 720,125" fill="none" stroke="#006400" stroke-width="3" stroke-dasharray="8,4" stroke-linecap="round">
+                            <animate attributeName="stroke-dashoffset" from="24" to="0" dur="3s" repeatCount="indefinite"/>
+                        </path>
+                        <polygon points="718,122 730,132 722,118" fill="#006400"/>
+                        
+                        <!-- Legend -->
+                        <rect x="560" y="10" width="155" height="40" fill="rgba(245,237,216,0.97)" stroke="#8b7355" rx="3"/>
+                        <text x="575" y="26" font-family="Cinzel" font-size="9" fill="#4a3728" font-weight="bold">ROUTES</text>
+                        <line x1="625" y1="22" x2="655" y2="22" stroke="#8b0000" stroke-width="3"/>
+                        <text x="660" y="26" font-family="IM Fell English" font-size="9" fill="#4a3728">USA</text>
+                        <line x1="575" y1="38" x2="605" y2="38" stroke="#006400" stroke-width="3"/>
+                        <text x="610" y="42" font-family="IM Fell English" font-size="9" fill="#4a3728">Australia</text>
+                        <line x1="660" y1="38" x2="690" y2="38" stroke="#654321" stroke-width="2"/>
+                        <text x="695" y="42" font-family="IM Fell English" font-size="9" fill="#4a3728">Canada</text>
+                    </svg>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="right-column">
+                
+                <!-- Push & Pull -->
+                <div class="paper-card no-flex" style="--rotate: 0.8deg;">
+                    <div class="tape tape-left"></div>
+                    <h3 class="card-title"><span class="icon">⚖️</span> Push & Pull Factors</h3>
+                    <div class="push-pull-grid">
+                        <div class="push-box">
+                            <h4>⬅️ PUSH</h4>
+                            <ul class="factor-list">
+                                <li>Famine</li>
+                                <li>Persecution</li>
+                                <li>Poverty</li>
+                            </ul>
+                        </div>
+                        <div class="pull-box">
+                            <h4>➡️ PULL</h4>
+                            <ul class="factor-list">
+                                <li>Cheap land</li>
+                                <li>Higher wages</li>
+                                <li>Freedom</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Life in Britain -->
+                <div class="paper-card" style="--rotate: -0.5deg;">
+                    <div class="tape tape-corner"></div>
+                    <h3 class="card-title"><span class="icon">🏠</span> Life in Britain</h3>
+                    <div class="image-frame">
+                        <div class="image-placeholder">
+                            <div class="placeholder-title">Whitechapel Slums</div>
+                            <div class="placeholder-source">Gustave Doré, 1872</div>
+                        </div>
+                    </div>
+                    <h4 class="section-header">Irish Immigrants</h4>
+                    <ul class="factor-list">
+                        <li>Settled in East End, Manchester, Glasgow</li>
+                        <li>Lowest-paid jobs, overcrowded slums</li>
+                    </ul>
+                    <h4 class="section-header">Jewish Refugees (1880s)</h4>
+                    <ul class="factor-list">
+                        <li>Fled pogroms in Russia</li>
+                        <li>150,000 arrived 1880-1914</li>
+                    </ul>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Question Banner -->
+        <div class="question-banner">
+            <span class="question-title">✦ QUESTION ✦</span>
+            <span class="question-text">
+                Between 1846-1851, <strong>one million Irish died</strong> — yet Ireland was <em>exporting</em> food to England, guarded by soldiers.
+                <span class="highlight">Was the Famine a natural disaster... or something else?</span>
+            </span>
+        </div>
+
+        <!-- Footer -->
+        <footer class="poster-footer">
+            <p class="footer-text">Geschichte Bilingual — The Industrial Revolution</p>
+            <p class="footer-name">— PRESENTED BY EVI —</p>
+        </footer>
+    </div>
+</body>
+</html>
